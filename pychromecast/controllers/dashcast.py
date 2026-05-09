@@ -11,6 +11,7 @@ from ..generated.cast_channel_pb2 import (  # pylint: disable=no-name-in-module
 from ..response_handler import chain_on_success
 from . import CallbackType, BaseController
 
+
 APP_NAMESPACE = "urn:x-cast:com.madmod.dashcast"
 
 

@@ -387,9 +387,7 @@ class BaseMediaPlayer(QuickPlayController):
             app_must_match=app_must_match,
         )
 
-    def _check_shaka_broadcast(
-        self, data: dict
-    ) -> None:  # pylint: disable=too-many-boolean-expressions,protected-access
+    def _check_shaka_broadcast(self, data: dict) -> None:  # pylint: disable=too-many-boolean-expressions,protected-access
         """Workaround for Shaka's broadcast MEDIA_STATUS responses."""
         if (
             data.get("type") == TYPE_MEDIA_STATUS
@@ -414,9 +412,7 @@ class BaseMediaPlayer(QuickPlayController):
                             pending,
                         )
                         for req_id in pending:
-                            self._socket_client._request_callbacks.pop(req_id)(
-                                True, data
-                            )
+                            self._socket_client._request_callbacks.pop(req_id)(True, data)
 
     def play_media(  # pylint: disable=too-many-locals
         self,
