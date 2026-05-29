@@ -10,7 +10,7 @@ import logging
 import threading
 from typing import Any
 
-from ..config import APP_MEDIA_RECEIVER
+from ..config import APP_MEDIA_RECEIVER, APP_SHAKA
 from ..const import MESSAGE_TYPE
 from ..error import ControllerNotRegistered
 from ..generated.cast_channel_pb2 import (  # pylint: disable=no-name-in-module
@@ -387,6 +387,33 @@ class BaseMediaPlayer(QuickPlayController):
             app_must_match=app_must_match,
         )
 
+    def _check_shaka_broadcast(self, data: dict) -> None:  # pylint: disable=too-many-boolean-expressions,protected-access
+        """Workaround for Shaka's broadcast MEDIA_STATUS responses."""
+        if (
+            data.get("type") == TYPE_MEDIA_STATUS
+            and data.get("requestId") == 0
+            and self._socket_client is not None
+            and self._socket_client.receiver_controller.status is not None
+            and self._socket_client.receiver_controller.status.app_id == APP_SHAKA
+            and self._socket_client._request_callbacks
+        ):
+            status_list = data.get("status", [])
+            if status_list:
+                state = status_list[0]
+                player_state = state.get("playerState")
+                idle_reason = state.get("idleReason")
+                if player_state != "IDLE" or idle_reason is not None:
+                    pending = list(self._socket_client._request_callbacks)
+                    if pending:
+                        self.logger.debug(
+                            "Shaka broadcast MEDIA_STATUS (%s) - firing %d pending callback(s): %s",
+                            player_state,
+                            len(pending),
+                            pending,
+                        )
+                        for req_id in pending:
+                            self._socket_client._request_callbacks.pop(req_id)(True, data)
+
     def play_media(  # pylint: disable=too-many-locals
         self,
         url: str,
@@ -584,6 +611,7 @@ class MediaController(BaseMediaPlayer):
 
     def receive_message(self, _message: CastMessage, data: dict) -> bool:
         """Called when a media message is received."""
+        self._check_shaka_broadcast(data)
         if data[MESSAGE_TYPE] == TYPE_MEDIA_STATUS:
             self._process_media_status(data)
             return True
